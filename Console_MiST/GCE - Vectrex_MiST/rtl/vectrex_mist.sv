@@ -63,7 +63,7 @@ wire  [3:0] r, g, b;
 wire 			hb, vb;
 wire       	blankn = ~(hb | vb);
 wire 			cart_rd;
-wire [14:0] cart_addr;
+wire [15:0] cart_addr;
 wire  [7:0] cart_do;
 wire        ioctl_downl;
 wire  [7:0] ioctl_index;
@@ -89,6 +89,9 @@ assign SDRAM_CLK = clk_24;
 wire [15:0] sdram_do;
 assign cart_do = sdram_do[7:0];
 
+wire [15:0] download_addr;
+assign download_addr = !ioctl_index[0] ? {4'b1111,ioctl_addr[11:0]} : ioctl_addr[15:0];
+
 sdram cart
 (
     .*,
@@ -97,7 +100,7 @@ sdram cart
     .wtbt(2'b00),
     .dout(sdram_do),
     .din ({ioctl_dout, ioctl_dout}),
-    .addr(ioctl_downl ? ioctl_addr : cart_addr),
+    .addr(ioctl_downl ? download_addr : cart_addr),
     .we(ioctl_downl & ioctl_wr),
     .rd(!ioctl_downl & cart_rd),
 	.ready()
