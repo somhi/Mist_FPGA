@@ -90,7 +90,7 @@ wire [15:0] sdram_do;
 assign cart_do = sdram_do[7:0];
 
 wire [15:0] download_addr;
-assign download_addr = !ioctl_index[0] ? {4'b1111,ioctl_addr[11:0]} : ioctl_addr[15:0];
+assign download_addr = !ioctl_index[0] ? {4'b111,ioctl_addr[12:0]} : ioctl_addr[15:0];
 
 sdram cart
 (
