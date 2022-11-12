@@ -50,8 +50,8 @@ entity cpu is
       sdma_request      : in  std_logic;
       canSpeedup        : out std_logic;
          
-      bus_read          : out std_logic := '0';
-      bus_write         : out std_logic := '0';
+      bus_read          : buffer std_logic := '0';
+      bus_write         : buffer std_logic := '0';
       bus_be            : out std_logic_vector(1 downto 0) := "00";
       bus_addr          : out unsigned(19 downto 0) := (others => '0');
       bus_datawrite     : out std_logic_vector(15 downto 0) := (others => '0');
