@@ -34,6 +34,10 @@ module Pacman_MiST(
 	input         SPI_SS2,
 	input         SPI_SS3,
 	input         CONF_DATA0,
+	`ifdef DEMISTIFY
+    output [9:0]  DAC_L,
+    output [9:0]  DAC_R,
+	`endif
 	input         CLOCK_27
 );
 
@@ -304,6 +308,13 @@ dacwrap dac (
 	.dac_i(audio),
 	.dac_o(AUDIO_L)
 	);
+
+`ifdef DEMISTIFY
+	assign DAC_R = DAC_L;
+	assign DAC_L = audio;  //audio sample is 10 bits long
+`endif
+
+
 
 // controls
 wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE, m_fireF;
