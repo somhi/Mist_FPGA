@@ -167,14 +167,10 @@ architecture RTL of deca_top is
 	signal joyd : std_logic_vector(7 downto 0);
 
 	-- DAC AUDIO     
-	signal dac_l : signed(9 downto 0);
-	signal dac_r : signed(9 downto 0);
-    --signal dac_midi_l : signed(15 downto 0);
-	--signal dac_midi_r : signed(15 downto 0);
-	--signal dac_l: std_logic_vector(15 downto 0);
-	--signal dac_r: std_logic_vector(15 downto 0);
-	signal dac_l_s: signed(15 downto 0);
-	signal dac_r_s: signed(15 downto 0);
+	signal dac_l : std_logic_vector(9 downto 0);
+	signal dac_r : std_logic_vector(9 downto 0);
+	signal dac_l_s: std_logic_vector(15 downto 0);
+	signal dac_r_s: std_logic_vector(15 downto 0);
 
 	component AUDIO_SPI_CTL_RD
 		port (
@@ -195,17 +191,35 @@ architecture RTL of deca_top is
 	signal i2s_Lr_o  : std_logic;
 	signal i2s_D_o   : std_logic;
 
-	component audio_top is
-		port (
-			clk_50MHz : in std_logic;  -- system clock (50 MHz)
-			dac_MCLK  : out std_logic; -- outputs to I2S DAC
-			dac_LRCK  : out std_logic;
-			dac_SCLK  : out std_logic;
-			dac_SDIN  : out std_logic;
-			L_data    : in std_logic_vector(15 downto 0); -- LEFT data (16-bit signed)
-			R_data    : in std_logic_vector(15 downto 0)  -- RIGHT data (16-bit signed) 
+	-- component audio_top is
+	-- 	port (
+	-- 		clk_50MHz : in std_logic;  -- system clock (50 MHz)
+	-- 		dac_MCLK  : out std_logic; -- outputs to I2S DAC
+	-- 		dac_LRCK  : out std_logic;
+	-- 		dac_SCLK  : out std_logic;
+	-- 		dac_SDIN  : out std_logic;
+	-- 		L_data    : in std_logic_vector(15 downto 0); -- LEFT data (16-bit signed)
+	-- 		R_data    : in std_logic_vector(15 downto 0)  -- RIGHT data (16-bit signed) 
+	-- 	);
+	-- end component;
+
+	component i2s_transmitter
+		generic (
+		  mclk_rate	  : positive; 	
+		  sample_rate : positive
 		);
-	end component;
+		  port (
+		  clock_i : in std_logic;
+		  reset_i : in std_logic;
+		  pcm_l_i : in std_logic_vector(15 downto 0);
+		  pcm_r_i : in std_logic_vector(15 downto 0);
+		  i2s_mclk_o : out std_logic;
+		  i2s_lrclk_o : out std_logic;
+		  i2s_bclk_o : out std_logic;
+		  i2s_d_o : out std_logic
+		);
+	  end component;
+
 
 	-- HDMI
 
@@ -366,25 +380,43 @@ begin
 	);
 
 	-- AUDIO CODEC
-	audio_i2s : entity work.audio_top
-		port map(
-			clk_50MHz => MAX10_CLK1_50,
-			dac_MCLK  => i2s_Mck_o,
-			dac_LRCK  => i2s_Lr_o,
-			dac_SCLK  => i2s_Sck_o,
-			dac_SDIN  => i2s_D_o,
-			L_data    => std_logic_vector(dac_l_s),
-			R_data    => std_logic_vector(dac_r_s)
-		);
+	-- audio_i2s : entity work.audio_top
+	-- 	port map(
+	-- 		clk_50MHz => MAX10_CLK1_50,
+	-- 		dac_MCLK  => i2s_Mck_o,
+	-- 		dac_LRCK  => i2s_Lr_o,
+	-- 		dac_SCLK  => i2s_Sck_o,
+	-- 		dac_SDIN  => i2s_D_o,
+	-- 		L_data    => std_logic_vector(dac_l_s),
+	-- 		R_data    => std_logic_vector(dac_r_s)
+	-- 	);
 
-	dac_l_s <= ('0' & dac_l & "00000");
-	dac_r_s <= ('0' & dac_r & "00000");
+
+	dac_l_s <= ("00" & dac_l & "0000");
+	dac_r_s <= ("00" & dac_r & "0000");
+
+
+	i2s_transmitter_inst : i2s_transmitter
+	generic map (
+		mclk_rate => 24000000,
+		sample_rate => 48000
+	)
+	port map (
+		clock_i => MAX10_CLK1_50,
+		reset_i => '0',
+		pcm_l_i => dac_l_s,
+		pcm_r_i => dac_r_s,
+		i2s_mclk_o => i2s_Mck_o,
+		i2s_lrclk_o => i2s_Lr_o,
+		i2s_bclk_o => i2s_Sck_o,
+		i2s_d_o => i2s_D_o
+	);
+		
 
 	I2S_MCK <= i2s_Mck_o;
 	I2S_SCK <= i2s_Sck_o;
 	I2S_LR  <= i2s_Lr_o;
 	I2S_D   <= i2s_D_o;
-
 
 
 	-- DECA HDMI

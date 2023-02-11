@@ -68,8 +68,8 @@ constant demistify_serialdebug : std_logic := '0';
 			AUDIO_L  : out std_logic;
 			AUDIO_R  : out std_logic;
 			--D AUDIO 
-			DAC_L		: OUT SIGNED(9 DOWNTO 0);
-			DAC_R		: OUT SIGNED(9 DOWNTO 0)
+			DAC_L		: OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
+			DAC_R		: OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
 		);
 	END COMPONENT;
 	

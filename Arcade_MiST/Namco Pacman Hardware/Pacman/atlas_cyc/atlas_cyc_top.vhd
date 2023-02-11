@@ -128,25 +128,40 @@ architecture RTL of atlas_top is
 
 
 	-- I2S audio
-	component audio_top is
-	Port ( 	
-			clk_50MHz : in STD_LOGIC; -- system clock
-			dac_MCLK : out STD_LOGIC; -- outputs to PMODI2L DAC
-			dac_LRCK : out STD_LOGIC;
-			dac_SCLK : out STD_LOGIC;
-			dac_SDIN : out STD_LOGIC;
-			L_data : 	in std_logic_vector(15 downto 0);  	-- LEFT data (16-bit signed)
-			R_data : 	in std_logic_vector(15 downto 0)  	-- RIGHT data (16-bit signed) 
-	);
-	end component;	
+	-- component audio_top is
+	-- Port ( 	
+	-- 		clk_50MHz : in STD_LOGIC; -- system clock
+	-- 		dac_MCLK : out STD_LOGIC; -- outputs to PMODI2L DAC
+	-- 		dac_LRCK : out STD_LOGIC;
+	-- 		dac_SCLK : out STD_LOGIC;
+	-- 		dac_SDIN : out STD_LOGIC;
+	-- 		L_data : 	in std_logic_vector(15 downto 0);  	-- LEFT data (16-bit signed)
+	-- 		R_data : 	in std_logic_vector(15 downto 0)  	-- RIGHT data (16-bit signed) 
+	-- );
+	-- end component;	
 
+	component i2s_transmitter
+		generic (
+		  mclk_rate	  : positive; 	
+		  sample_rate : positive
+		);
+		  port (
+		  clock_i : in std_logic;
+		  reset_i : in std_logic;
+		  pcm_l_i : in std_logic_vector(15 downto 0);
+		  pcm_r_i : in std_logic_vector(15 downto 0);
+		  i2s_mclk_o : out std_logic;
+		  i2s_lrclk_o : out std_logic;
+		  i2s_bclk_o : out std_logic;
+		  i2s_d_o : out std_logic
+		);
+	  end component;
+	  
 	-- DAC AUDIO     
-	signal dac_l : signed(9 downto 0);
-	signal dac_r : signed(9 downto 0);
-	--signal dac_l: std_logic_vector(15 downto 0);
-	--signal dac_r: std_logic_vector(15 downto 0);
-	signal dac_l_s: signed(15 downto 0);
-	signal dac_r_s: signed(15 downto 0);
+	signal dac_l : std_logic_vector(9 downto 0);
+	signal dac_r : std_logic_vector(9 downto 0);
+	signal dac_l_s: std_logic_vector(15 downto 0);
+	signal dac_r_s: std_logic_vector(15 downto 0);
 
 	-- I2S 
 	signal i2s_mclk : std_logic;
@@ -315,19 +330,37 @@ begin
 	joyd <= (others => '1');
 
 	-- I2S audio
-	audio_i2s: audio_top
-	port map(
-		clk_50MHz => CLK50M,
-		dac_MCLK  => I2S_MCLK,
-		dac_LRCK  => PI_MOSI_I2S_LRCLK,
-		dac_SCLK  => PI_MISO_I2S_BCLK,
-		dac_SDIN  => PI_CLK_I2S_DATA,
-		L_data    => std_logic_vector(dac_l_s),
-		R_data    => std_logic_vector(dac_r_s)
-	);		
+	-- audio_i2s: audio_top
+	-- port map(
+	-- 	clk_50MHz => CLK50M,
+	-- 	dac_MCLK  => I2S_MCLK,
+	-- 	dac_LRCK  => PI_MOSI_I2S_LRCLK,
+	-- 	dac_SCLK  => PI_MISO_I2S_BCLK,
+	-- 	dac_SDIN  => PI_CLK_I2S_DATA,
+	-- 	L_data    => std_logic_vector(dac_l_s),
+	-- 	R_data    => std_logic_vector(dac_r_s)
+	-- );		
 
-	dac_l_s <= ('0' & dac_l & "00000");
-	dac_r_s <= ('0' & dac_r & "00000");
+
+	dac_l_s <= ("000" & dac_l & "000");
+	dac_r_s <= ("000" & dac_r & "000");
+
+
+	i2s_transmitter_inst : i2s_transmitter
+	generic map (
+		mclk_rate => 24000000,
+		sample_rate => 48000
+	)
+	port map (
+		clock_i => CLK50M,
+		reset_i => '0',
+		pcm_l_i => dac_l_s,
+		pcm_r_i => dac_r_s,
+		i2s_mclk_o => I2S_MCLK,
+		i2s_lrclk_o => PI_MOSI_I2S_LRCLK,
+		i2s_bclk_o => PI_MISO_I2S_BCLK,
+		i2s_d_o => PI_CLK_I2S_DATA
+	);
 
 	-- BEGIN VGA ATLAS -------------------  
 	VGA_R  <= vga_red(7 downto 6);
