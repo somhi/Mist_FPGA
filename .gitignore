@@ -26,3 +26,8 @@ Arcade_MiST/Jaleco Exerion/exerion.pdf
 Arcade_MiST/Jaleco Exerion/meta/Exerion.rbf
 *.exe
 *.url
+*.log
+*.asm
+*.o
+controller.bin
+controller.map
