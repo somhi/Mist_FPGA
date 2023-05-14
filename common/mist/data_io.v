@@ -28,12 +28,7 @@ module data_io
 	input             SPI_SS2,
 	input             SPI_SS4,
 	input             SPI_DI,
-`ifdef DEMISTIFY
-	output            SPI_DO,
-	input             SPI_DO_IN,
-`else
 	inout             SPI_DO,
-`endif
 
 	input             QCSn,
 	input             QSCK,
@@ -223,37 +218,30 @@ end
 // direct SD Card->FPGA transfer
 generate if (ROM_DIRECT_UPLOAD || ENABLE_IDE) begin
 
-reg  [6:0] dio_sbuf2;
-reg  [2:0] dio_cnt2;
-reg  [9:0] dio_bytecnt;
-wire dio_spi_direct_in;
-
-`ifdef DEMISTIFY
-	assign dio_spi_direct_in = SPI_DO_IN;
-`else
-	assign dio_spi_direct_in = SPI_DO;
-`endif
-
 always@(posedge SPI_SCK, posedge SPI_SS4) begin : SPI_DIRECT_RECEIVER
+	reg  [6:0] sbuf2;
+	reg  [2:0] cnt2;
+	reg  [9:0] bytecnt;
+
 	if(SPI_SS4) begin
-		dio_cnt2 <= 0;
-		dio_bytecnt <= 0;
+		cnt2 <= 0;
+		bytecnt <= 0;
 	end else begin
 		// don't shift in last bit. It is evaluated directly
 		// when writing to ram
-		if(dio_cnt2 != 7)
-			dio_sbuf2 <= { dio_sbuf2[5:0], dio_spi_direct_in };
+		if(cnt2 != 7)
+			sbuf2 <= { sbuf2[5:0], SPI_DO };
 
-		dio_cnt2 <= dio_cnt2 + 1'd1;
+		cnt2 <= cnt2 + 1'd1;
 
 		// received a byte
-		if(dio_cnt2 == 7) begin
-			dio_bytecnt <= dio_bytecnt + 1'd1;
+		if(cnt2 == 7) begin
+			bytecnt <= bytecnt + 1'd1;
 			// read 514 byte/sector (512 + 2 CRC)
-			if (dio_bytecnt == 513) dio_bytecnt <= 0;
+			if (bytecnt == 513) bytecnt <= 0;
 			// don't send the CRC bytes
-			if (~dio_bytecnt[9]) begin
-				data_w2 <= {dio_sbuf2, dio_spi_direct_in};
+			if (~bytecnt[9]) begin
+				data_w2 <= {sbuf2, SPI_DO};
 				rclk2 <= ~rclk2;
 			end
 		end

@@ -18,6 +18,8 @@ module osd (
 	input  [5:0] R_in,
 	input  [5:0] G_in,
 	input  [5:0] B_in,
+	input        HBlank,
+	input        VBlank,
 	input        HSync,
 	input        VSync,
 
@@ -31,6 +33,7 @@ parameter OSD_X_OFFSET = 11'd0;
 parameter OSD_Y_OFFSET = 11'd0;
 parameter OSD_COLOR    = 3'd0;
 parameter OSD_AUTO_CE  = 1'b1;
+parameter USE_BLANKS   = 1'b0;
 
 localparam OSD_WIDTH   = 11'd256;
 localparam OSD_HEIGHT  = 11'd128;
@@ -45,22 +48,6 @@ localparam OSD_WIDTH_PADDED = OSD_WIDTH + (OSD_WIDTH >> 1);  // 25% padding left
 // of the minimig
 reg        osd_enable;
 (* ramstyle = "no_rw_check" *) reg  [7:0] osd_buffer[2047:0];  // the OSD buffer itself
-
-reg [10:0] osd_buffer_addr;
-reg [10:0] osd_waddr;
-reg [7:0] osd_d;
-reg [7:0] osd_byte;
-reg osd_we;
-
-always @(posedge SPI_SCK) begin
-	if(osd_we) begin
-		osd_buffer[osd_waddr]<=osd_d;
-	end
-end
-
-always @(posedge clk_sys) begin
-	osd_byte <= osd_buffer[osd_buffer_addr];
-end
 
 // the OSD has its own SPI interface to the io controller
 always@(posedge SPI_SCK, posedge SPI_SS3) begin
@@ -89,13 +76,9 @@ always@(posedge SPI_SCK, posedge SPI_SS3) begin
 			if(sbuf[6:3] == 4'b0100) osd_enable <= SPI_DI;
 		end
 
-		osd_we<=1'b0;
 		// command 0x20: OSDCMDWRITE
 		if((cmd[7:3] == 5'b00100) && (cnt == 15)) begin
-			osd_waddr<=bcnt;
-			osd_we<=1'b1;
-			osd_d<={sbuf[6:0], SPI_DI};
-//			osd_buffer[bcnt] <= {sbuf[6:0], SPI_DI};
+			osd_buffer[bcnt] <= {sbuf[6:0], SPI_DI};
 			bcnt <= bcnt + 1'd1;
 		end
 	end
@@ -109,42 +92,40 @@ end
 reg  [10:0] h_cnt;
 reg  [10:0] hs_low, hs_high;
 wire        hs_pol = hs_high < hs_low;
-wire [10:0] dsp_width = hs_pol ? hs_low : hs_high;
+wire [10:0] dsp_width = (hs_pol & !USE_BLANKS) ? hs_low : hs_high;
 
 // vertical counter
 reg  [10:0] v_cnt;
 reg  [10:0] vs_low, vs_high;
 wire        vs_pol = vs_high < vs_low;
-wire [10:0] dsp_height = vs_pol ? vs_low : vs_high;
+wire [10:0] dsp_height = (vs_pol & !USE_BLANKS) ? vs_low : vs_high;
 
 wire doublescan = (dsp_height>350);
 
 reg auto_ce_pix;
-
-reg [15:0] cecnt = 0;
-reg  [2:0] cepixsz;
-reg  [2:0] cepixcnt;
-reg        cehs;
-
 always @(posedge clk_sys) begin
+	reg [15:0] cnt = 0;
+	reg  [2:0] pixsz;
+	reg  [2:0] pixcnt;
+	reg        hs;
 
-	cecnt <= cecnt + 1'd1;
-	cehs <= HSync;
+	cnt <= cnt + 1'd1;
+	hs <= HSync;
 
-	cepixcnt <= cepixcnt + 1'd1;
-	if(cepixcnt == cepixsz) cepixcnt <= 0;
-	auto_ce_pix <= !cepixcnt;
+	pixcnt <= pixcnt + 1'd1;
+	if(pixcnt == pixsz) pixcnt <= 0;
+	auto_ce_pix <= !pixcnt;
 
-	if(cehs && ~HSync) begin
-		cecnt <= 0;
-		if(cecnt <= OSD_WIDTH_PADDED * 2) cepixsz <= 0;
-		else if(cecnt <= OSD_WIDTH_PADDED * 3) cepixsz <= 1;
-		else if(cecnt <= OSD_WIDTH_PADDED * 4) cepixsz <= 2;
-		else if(cecnt <= OSD_WIDTH_PADDED * 5) cepixsz <= 3;
-		else if(cecnt <= OSD_WIDTH_PADDED * 6) cepixsz <= 4;
-		else cepixsz <= 5;
+	if(hs && ~HSync) begin
+		cnt <= 0;
+		if(cnt <= OSD_WIDTH_PADDED * 2) pixsz <= 0;
+		else if(cnt <= OSD_WIDTH_PADDED * 3) pixsz <= 1;
+		else if(cnt <= OSD_WIDTH_PADDED * 4) pixsz <= 2;
+		else if(cnt <= OSD_WIDTH_PADDED * 5) pixsz <= 3;
+		else if(cnt <= OSD_WIDTH_PADDED * 6) pixsz <= 4;
+		else pixsz <= 5;
 
-		cepixcnt <= 0;
+		pixcnt <= 0;
 		auto_ce_pix <= 1;
 	end
 end
@@ -156,38 +137,53 @@ always @(posedge clk_sys) begin
 	reg vsD;
 
 	if(ce_pix) begin
-		// bring hsync into local clock domain
-		hsD <= HSync;
-
-		// falling edge of HSync
-		if(!HSync && hsD) begin
-			h_cnt <= 0;
-			hs_high <= h_cnt;
-		end
-
-		// rising edge of HSync
-		else if(HSync && !hsD) begin
-			h_cnt <= 0;
-			hs_low <= h_cnt;
-			v_cnt <= v_cnt + 1'd1;
-		end else begin
+		if (USE_BLANKS) begin
 			h_cnt <= h_cnt + 1'd1;
-		end
+			if(HBlank) begin
+				h_cnt <= 0;
+				if (h_cnt != 0) begin
+					hs_high <= h_cnt;
+					v_cnt <= v_cnt + 1'd1;
+				end
+			end
+			if(VBlank) begin
+				v_cnt <= 0;
+				if (v_cnt != 0 && vs_high != v_cnt + 1'd1) vs_high <= v_cnt;
+			end
+		end else begin
+			// bring hsync into local clock domain
+			hsD <= HSync;
 
-		vsD <= VSync;
+			// falling edge of HSync
+			if(!HSync && hsD) begin
+				h_cnt <= 0;
+				hs_high <= h_cnt;
+			end
 
-		// falling edge of VSync
-		if(!VSync && vsD) begin
-			v_cnt <= 0;
-			// if the difference is only one line, that might be interlaced picture
-			if (vs_high != v_cnt + 1'd1) vs_high <= v_cnt;
-		end
+			// rising edge of HSync
+			else if(HSync && !hsD) begin
+				h_cnt <= 0;
+				hs_low <= h_cnt;
+				v_cnt <= v_cnt + 1'd1;
+			end else begin
+				h_cnt <= h_cnt + 1'd1;
+			end
 
-		// rising edge of VSync
-		else if(VSync && !vsD) begin
-			v_cnt <= 0;
-			// if the difference is only one line, that might be interlaced picture
-			if (vs_low != v_cnt + 1'd1) vs_low <= v_cnt;
+			vsD <= VSync;
+
+			// falling edge of VSync
+			if(!VSync && vsD) begin
+				v_cnt <= 0;
+				// if the difference is only one line, that might be interlaced picture
+				if (vs_high != v_cnt + 1'd1) vs_high <= v_cnt;
+			end
+
+			// rising edge of VSync
+			else if(VSync && !vsD) begin
+				v_cnt <= 0;
+				// if the difference is only one line, that might be interlaced picture
+				if (vs_low != v_cnt + 1'd1) vs_low <= v_cnt;
+			end
 		end
 	end
 end
@@ -207,25 +203,26 @@ end
 
 wire [10:0] osd_hcnt    = h_cnt - h_osd_start;
 wire [10:0] osd_vcnt    = v_cnt - v_osd_start;
-wire [10:0] osd_hcnt_next  = osd_hcnt + 2'd1;  // one pixel offset for osd pixel
-wire [10:0] osd_hcnt_next2 = osd_hcnt + 2'd2;  // two pixel offset for osd byte address register
-reg        osd_de;
+wire [10:0] osd_hcnt_next  = osd_hcnt + 2'd1;  // one pixel offset for osd byte address register
+reg         osd_de;
 
+reg [10:0] osd_buffer_addr;
+wire [7:0] osd_byte = osd_buffer[osd_buffer_addr];
 reg        osd_pixel;
 
 always @(posedge clk_sys) begin
 	if(ce_pix) begin
-		osd_buffer_addr <= rotate[0] ? {rotate[1] ? osd_hcnt_next2[7:5] : ~osd_hcnt_next2[7:5],
+		osd_buffer_addr <= rotate[0] ? {rotate[1] ? osd_hcnt_next[7:5] : ~osd_hcnt_next[7:5],
 		                                rotate[1] ? (doublescan ? ~osd_vcnt[7:0] : ~{osd_vcnt[6:0], 1'b0}) :
 		                                            (doublescan ?  osd_vcnt[7:0]  : {osd_vcnt[6:0], 1'b0})} :
-		                               {doublescan ? osd_vcnt[7:5] : osd_vcnt[6:4], osd_hcnt_next2[7:0]};
+		                               {doublescan ? osd_vcnt[7:5] : osd_vcnt[6:4], osd_hcnt_next[7:0]};
 
-		osd_pixel <= rotate[0]  ? osd_byte[rotate[1] ? osd_hcnt_next[4:2] : ~osd_hcnt_next[4:2]] :
+		osd_pixel <= rotate[0]  ? osd_byte[rotate[1] ? osd_hcnt[4:2] : ~osd_hcnt[4:2]] :
 		                          osd_byte[doublescan ? osd_vcnt[4:2] : osd_vcnt[3:1]];
 
 		osd_de <= osd_enable &&
-		    (HSync != hs_pol) && ((h_cnt + 1'd1) >= h_osd_start) && ((h_cnt + 1'd1) < h_osd_end) &&
-		    (VSync != vs_pol) && (v_cnt >= v_osd_start) && (v_cnt < v_osd_end);
+		    ((USE_BLANKS && !HBlank) || (!USE_BLANKS && HSync != hs_pol)) && (h_cnt >= h_osd_start) && (h_cnt < h_osd_end) &&
+		    ((USE_BLANKS && !VBlank) || (!USE_BLANKS && VSync != vs_pol)) && (v_cnt >= v_osd_start) && (v_cnt < v_osd_end);
 	end
 end
 
