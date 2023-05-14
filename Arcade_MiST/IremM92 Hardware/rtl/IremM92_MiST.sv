@@ -106,8 +106,13 @@ always @(posedge CLK_40M)
 	conf_str_char <= CONF_STR[(($size(CONF_STR)>>3) - conf_str_addr - 1)<<3 +:8];
 
 user_io #(
-	//.STRLEN(($size(CONF_STR)>>3)),
-	.ROM_DIRECT_UPLOAD(1'b1))
+    `ifdef DEMISTIFY
+    .STRLEN(($size(CONF_STR)>>3))
+    `endif
+    `ifndef DEMISTIFY
+    .ROM_DIRECT_UPLOAD(1'b1)
+    `endif
+)
 user_io(
 	.clk_sys        (CLK_40M        ),
 	.conf_str       (CONF_STR       ),
@@ -220,7 +225,7 @@ wire [3:0] bram_cs;
 wire bram_wr;
 
 board_cfg_t board_cfg;
-sdram_4w_cl3 #(120) sdram
+sdram_4w_cl3 #(100) sdram           //Originally 120
 (
   .*,
   .init_n        ( pll_locked    ),

@@ -1,0 +1,6 @@
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ../rtl/IremM92_MiST.sv]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../rtl/m92.qip]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../../../common/mist/mist.qip]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../../../common/CPU/v30/V30.qip]
+set_global_assignment -name QIP_FILE [file join $::quartus(qip_path) ../../../common/Sound/jt51/jt51.qip]
+set_global_assignment -name SDC_FILE [file join $::quartus(qip_path) IremM92.sdc]
