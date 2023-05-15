@@ -225,7 +225,7 @@ wire [3:0] bram_cs;
 wire bram_wr;
 
 board_cfg_t board_cfg;
-sdram_4w_cl3 #(100) sdram           //Originally 120
+sdram_4w_cl3 #(120) sdram
 (
   .*,
   .init_n        ( pll_locked    ),
