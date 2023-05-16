@@ -18,6 +18,11 @@ module IremM92_MiST(
 	input         CONF_DATA0,
 	input         CLOCK_27,
 
+    `ifdef DEMISTIFY
+    output [15:0] DAC_L,
+    output [15:0] DAC_R,
+    `endif
+
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
 	output        SDRAM_DQML,
@@ -108,8 +113,7 @@ always @(posedge CLK_40M)
 user_io #(
     `ifdef DEMISTIFY
     .STRLEN(($size(CONF_STR)>>3))
-    `endif
-    `ifndef DEMISTIFY
+    `else
     .ROM_DIRECT_UPLOAD(1'b1)
     `endif
 )
@@ -225,7 +229,12 @@ wire [3:0] bram_cs;
 wire bram_wr;
 
 board_cfg_t board_cfg;
+
+`ifdef DEMISTIFY_DECA
+sdram_4w_cl3 #(100) sdram
+`else
 sdram_4w_cl3 #(120) sdram
+`endif
 (
   .*,
   .init_n        ( pll_locked    ),
@@ -332,6 +341,11 @@ wire [7:0] R, G, B;
 wire HBlank, VBlank, HSync, VSync;
 wire ce_pix;
 wire flipped;
+
+`ifdef DEMISTIFY
+assign DAC_L = ch_left;
+assign DAC_R = ch_right;
+`endif
 
 m92 m92(
     .clk_sys(CLK_40M),

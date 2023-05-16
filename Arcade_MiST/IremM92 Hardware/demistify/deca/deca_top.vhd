@@ -171,10 +171,6 @@ architecture RTL of deca_top is
 	-- DAC AUDIO
 	signal dac_l : signed(15 downto 0);
 	signal dac_r : signed(15 downto 0);
-	--signal dac_l: std_logic_vector(15 downto 0);
-	--signal dac_r: std_logic_vector(15 downto 0);
-	--signal dac_l_s: signed(15 downto 0);
-	--signal dac_r_s: signed(15 downto 0);
 
 	component AUDIO_SPI_CTL_RD
 		port (
@@ -382,12 +378,8 @@ begin
 			dac_LRCK  => i2s_Lr_o,
 			L_data    => std_logic_vector(dac_l),
 			R_data    => std_logic_vector(dac_r)
-		--	L_data    => std_logic_vector(dac_l_s),
-		--	R_data    => std_logic_vector(dac_r_s)
 		);
 
-	--dac_l_s <= ('0' & dac_l(14 downto 0));
-	--dac_r_s <= ('0' & dac_r(14 downto 0));
 
 	I2S_MCK <= i2s_Mck_o;
 	I2S_SCK <= i2s_Sck_o;
@@ -475,8 +467,8 @@ begin
 			-- vga_x_vs  => vga_x_vs,
 
 			--AUDIO
-			-- DAC_L   => dac_l,
-			-- DAC_R   => dac_r,
+			DAC_L   => dac_l,
+			DAC_R   => dac_r,
 			AUDIO_L => sigma_l,
 			AUDIO_R => sigma_r
 

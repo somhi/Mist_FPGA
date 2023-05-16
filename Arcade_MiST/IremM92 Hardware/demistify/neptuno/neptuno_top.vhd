@@ -129,10 +129,6 @@ architecture RTL of neptuno_top is
 	-- DAC AUDIO
 	signal dac_l : signed(15 downto 0);
 	signal dac_r : signed(15 downto 0);
-	--signal dac_l: std_logic_vector(15 downto 0);
-	--signal dac_r: std_logic_vector(15 downto 0);
-	--signal dac_l_s: signed(15 downto 0);
-	--signal dac_r_s: signed(15 downto 0);
 
 	-- I2S 
 	signal i2s_mclk : std_logic;
@@ -140,7 +136,7 @@ architecture RTL of neptuno_top is
 	component audio_top is
 		port (
 			clk_50MHz : in std_logic;  -- system clock
-			dac_MCLK  : out std_logic; -- outputs to PMODI2S DAC
+			dac_MCLK  : out std_logic; -- outputs to I2S DAC
 			dac_LRCK  : out std_logic;
 			dac_SCLK  : out std_logic;
 			dac_SDIN  : out std_logic;
@@ -262,12 +258,7 @@ begin
 			dac_LRCK  => I2S_LRCLK,
 			L_data    => std_logic_vector(dac_l),
 			R_data    => std_logic_vector(dac_r)
-		--	L_data    => std_logic_vector(dac_l_s),
-		--	R_data    => std_logic_vector(dac_r_s)
 		);
-
-	--dac_l_s <= ('0' & dac_l(14 downto 0));
-	--dac_r_s <= ('0' & dac_r(14 downto 0));
 
 
 guest : component IremM92_MiST
@@ -306,8 +297,8 @@ guest : component IremM92_MiST
 		VGA_B      => vga_blue(7 downto 2),
 
 		--AUDIO
-		-- DAC_L   => dac_l,
-		-- DAC_R   => dac_r,
+		DAC_L   => dac_l,
+		DAC_R   => dac_r,
 		AUDIO_L => sigma_l,
 		AUDIO_R => sigma_r
 
