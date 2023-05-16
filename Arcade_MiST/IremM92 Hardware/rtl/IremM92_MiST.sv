@@ -112,10 +112,9 @@ always @(posedge CLK_40M)
 
 user_io #(
     `ifdef DEMISTIFY
-    .STRLEN(($size(CONF_STR)>>3))
-    `else
-    .ROM_DIRECT_UPLOAD(1'b1)
+    .STRLEN(($size(CONF_STR)>>3)),
     `endif
+    .ROM_DIRECT_UPLOAD(1'b1)
 )
 user_io(
 	.clk_sys        (CLK_40M        ),
