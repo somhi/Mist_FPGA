@@ -10,9 +10,6 @@ module IremM72_MiST(
 	output        AUDIO_L,
 	output        AUDIO_R,
 	input         SPI_SCK,
-`ifdef DEMISTIFY
-	input         SPI_DO_IN,
-`endif
 	inout         SPI_DO,
 	input         SPI_DI,
 	input         SPI_SS2,
@@ -20,6 +17,11 @@ module IremM72_MiST(
 	input         SPI_SS4,
 	input         CONF_DATA0,
 	input         CLOCK_27,
+
+    `ifdef DEMISTIFY
+    output [15:0] DAC_L,
+    output [15:0] DAC_R,
+    `endif
 
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
@@ -98,8 +100,8 @@ pll_mist pll(
 wire [31:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
-wire  [7:0] joystick_0;
-wire  [7:0] joystick_1;
+wire [15:0] joystick_0;
+wire [15:0] joystick_1;
 wire        scandoublerD;
 wire        ypbpr;
 wire        no_csync;
@@ -144,9 +146,6 @@ data_io #(.ROM_DIRECT_UPLOAD(1'b1)) data_io(
 	.SPI_SS4       ( SPI_SS4      ),
 	.SPI_DI        ( SPI_DI       ),
 	.SPI_DO        ( SPI_DO       ),
-`ifdef DEMISTIFY
-	.SPI_DO_IN     ( SPI_DO_IN    ),
-`endif
 	.clkref_n      ( 1'b0         ),
 	.ioctl_download( ioctl_downl  ),
 	.ioctl_index   ( ioctl_index  ),
@@ -169,6 +168,7 @@ always @(posedge CLK_32M) begin
 	if (ioctl_downlD & ~ioctl_downl) rom_loaded <= 1;
 	reset <= reset_count != 16'h0000;
 
+    if (~ioctl_downlD & ioctl_downl & (ioctl_index == 0)) rom_loaded <= 1'b0;
 end
 
 wire [63:0] sdr_sprite_dout;
@@ -228,7 +228,7 @@ sdram_4w #(96) sdram
   .port1_we      ( sdr_rom_write ),
   .port1_ds      ( sdr_rom_be    ),
   .port1_d       ( sdr_rom_data  ),
-  .port1_q       ( ),// sdr_rom_ack   ),
+  .port1_q       ( sdr_rom_ack   ),
 
   // Main CPU
   .cpu1_rom_addr ( ),
@@ -262,11 +262,11 @@ sdram_4w #(96) sdram
   // Bank 2-3 ops
   .port2_a       ( sdr_rom_addr[24:1] ),
   .port2_req     ( sdr_rom_req     ),
-  .port2_ack     ( ), // sdr_rom_ack     ),
+  .port2_ack     ( sdr_rom_ack     ),
   .port2_we      ( sdr_rom_write   ),
   .port2_ds      ( sdr_rom_be      ),
   .port2_d       ( sdr_rom_data    ),
-  .port2_q       ( ),// sdr_rom_ack     ),
+  .port2_q       ( sdr_rom_ack     ),
 
   .gfx1_req      ( sdr_bg_req_a    ),
   .gfx1_ack      ( sdr_bg_ack_a    ),
@@ -288,7 +288,7 @@ sdram_4w #(96) sdram
   .sp_ack        ( sdr_sprite_ack  ),
   .sp_q          ( sdr_sprite_dout )
 );
-
+ 
 rom_loader rom_loader(
     .sys_clk(CLK_32M),
 
@@ -315,10 +315,14 @@ rom_loader rom_loader(
 wire [15:0] ch_left, ch_right;
 wire [7:0] R, G, B;
 wire HBlank, VBlank, HSync, VSync;
-wire blankn = !(HBlank | VBlank);
 wire ce_pix;
 
 ddr_debug_data_t ddr_debug_data;
+
+`ifdef DEMISTIFY
+assign DAC_L = ch_left;
+assign DAC_R = ch_right;
+`endif
 
 m72 m72(
     .CLK_32M(CLK_32M),
@@ -407,14 +411,16 @@ m72 m72(
     .video_60hz(video_60hz)
 );
 
-mist_video #(.COLOR_DEPTH(6), .SD_HCNT_WIDTH(10)) mist_video(
+mist_video #(.COLOR_DEPTH(6), .SD_HCNT_WIDTH(10), .USE_BLANKS(1'b1)) mist_video(
 	.clk_sys        ( CLK_32M          ),
 	.SPI_SCK        ( SPI_SCK          ),
 	.SPI_SS3        ( SPI_SS3          ),
 	.SPI_DI         ( SPI_DI           ),
-	.R              ( blankn ? R[7:2] : 0   ),
-	.G              ( blankn ? G[7:2] : 0   ),
-	.B              ( blankn ? B[7:2] : 0   ),
+	.R              ( R[7:2]           ),
+	.G              ( G[7:2]           ),
+	.B              ( B[7:2]           ),
+	.HBlank         ( HBlank           ),
+	.VBlank         ( VBlank           ),
 	.HSync          ( HSync            ),
 	.VSync          ( VSync            ),
 	.VGA_R          ( VGA_R            ),
@@ -453,7 +459,7 @@ wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE,
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
 
-arcade_inputs inputs (
+arcade_inputs #(.START1(8), .START2(10), .COIN1(9)) inputs (
 	.clk         ( CLK_32M     ),
 	.key_strobe  ( key_strobe  ),
 	.key_pressed ( key_pressed ),
