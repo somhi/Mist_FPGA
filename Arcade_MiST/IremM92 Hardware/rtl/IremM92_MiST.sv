@@ -177,6 +177,8 @@ always @(posedge CLK_40M) begin
 	if (status[0] | buttons[1] | ~rom_loaded) reset <= 1;
 
 	if (ioctl_downlD & ~ioctl_downl) rom_loaded <= 1;
+
+    if (~ioctl_downlD & ioctl_downl & (ioctl_index == 0)) rom_loaded <= 1'b0;
 end
 
 wire        sdr_vram_req;
