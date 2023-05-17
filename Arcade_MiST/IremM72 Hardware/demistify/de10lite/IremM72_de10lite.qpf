@@ -18,13 +18,13 @@
 #
 # Quartus Prime
 # Version 17.1.0 Build 590 10/25/2017 SJ Lite Edition
-# Date created = 21:28:27  May 17, 2023
+# Date created = 22:03:10  May 17, 2023
 #
 # -------------------------------------------------------------------------- #
 
 QUARTUS_VERSION = "17.1"
-DATE = "21:28:27  May 17, 2023"
+DATE = "22:03:10  May 17, 2023"
 
 # Revisions
 
-PROJECT_REVISION = "IremM92_deca"
+PROJECT_REVISION = "IremM72_de10lite"
