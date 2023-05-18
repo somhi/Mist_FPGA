@@ -127,7 +127,7 @@ set_multicycle_path -from ${topmodule}m72|mcu|prom|ram_rtl_0|* -to ${topmodule}m
 set_multicycle_path -from ${topmodule}m72|mcu|prom|ram_rtl_0|* -to ${topmodule}m72|mcu|prom_addr[*] -setup 2
 set_multicycle_path -from ${topmodule}m72|mcu|prom|ram_rtl_0|* -to ${topmodule}m72|mcu|prom_addr[*] -hold 1
 
-#set_multicycle_path -from [get_clocks $sdram_clk] -to [get_clocks $mem_clk] -setup 2
+set_multicycle_path -from [get_clocks $sdram_clk] -to [get_clocks $mem_clk] -setup 2
 
 
 #**************************************************************
