@@ -123,7 +123,7 @@ architecture rtl of chameleon64_top is
 	signal spi_ack : std_logic;
 
 -- internal SPI signals
-	
+	signal spi_do 	     : std_logic;
 	signal spi_toguest : std_logic;
 	signal spi_fromguest : std_logic;
 	signal spi_ss2 : std_logic;
@@ -436,8 +436,7 @@ begin
 --			SDRAM_CKE => ram_cke, -- Hardwired on TC64
 
 			-- SPI interface to control module
---			SPI_SD_DI => spi_miso,
-			SPI_DO => spi_fromguest,
+			SPI_DO     => spi_do,
 			SPI_DI => spi_toguest,
 			SPI_SCK => spi_clk_int,
 			SPI_SS2	=> spi_ss2,
@@ -480,7 +479,9 @@ begin
 
 	-- Pass internal signals to external SPI interface
 	spi_clk <= spi_clk_int;
-
+	spi_do <= spi_miso when spi_ss4='0' else 'Z'; -- to guest
+	spi_fromguest <= spi_do;  -- to control CPU
+	
 	controller : entity work.substitute_mcu
 	generic map (
 		sysclk_frequency => 500,

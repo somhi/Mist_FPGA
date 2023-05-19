@@ -17,6 +17,11 @@ module vectrex_mist
 	input         SPI_SS4,
 	input         CONF_DATA0,
 
+    `ifdef DEMISTIFY
+    output [9:0] DAC_L,
+    output [9:0] DAC_R,
+    `endif
+
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
 	output        SDRAM_DQML,
@@ -194,6 +199,11 @@ dac #(10) dac (
 	.dac_o			( AUDIO_L		)
 	);
 assign AUDIO_R = AUDIO_L;
+
+`ifdef DEMISTIFY
+assign DAC_L = audio;
+assign DAC_R = audio;
+`endif
 
 //////////////////   VIDEO   //////////////////
 
