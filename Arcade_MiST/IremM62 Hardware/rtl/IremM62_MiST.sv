@@ -15,7 +15,10 @@ module IremM62_MiST(
 	input         SPI_SS4,
 	input         CONF_DATA0,
 	input         CLOCK_27,
-
+    `ifdef DEMISTIFY
+    output [15:0] DAC_L,
+    output [15:0] DAC_R,
+    `endif
 	output [12:0] SDRAM_A,
 	inout  [15:0] SDRAM_DQ,
 	output        SDRAM_DQML,
@@ -29,7 +32,7 @@ module IremM62_MiST(
 	output        SDRAM_CKE
 );
 
-`include "rtl/build_id.v" 
+`include "build_id.v" 
 
 `define CORE_NAME "LDRUN"
 wire [6:0] core_mod;
@@ -93,8 +96,8 @@ pll_aud pll_aud(
 wire [31:0] status;
 wire  [1:0] buttons;
 wire  [1:0] switches;
-wire  [7:0] joystick_0;
-wire  [7:0] joystick_1;
+wire  [15:0] joystick_0;
+wire  [15:0] joystick_1;
 wire        scandoublerD;
 wire        ypbpr;
 wire        no_csync;
@@ -236,7 +239,7 @@ end
 
 // reset signal generation
 reg reset = 1;
-reg rom_loaded = 0;
+reg rom_loaded = 1;
 always @(posedge clk_sys) begin
 	reg ioctl_downlD;
 	reg [15:0] reset_count;
@@ -246,7 +249,11 @@ always @(posedge clk_sys) begin
 	else if (reset_count != 0) reset_count <= reset_count - 1'd1;
 
 	if (ioctl_downlD & ~ioctl_downl) rom_loaded <= 1;
+
 	reset <= reset_count != 16'h0000;
+
+	// Fix reset after loading second ARC file
+	if (~ioctl_downlD & ioctl_downl & (ioctl_index == 0)) rom_loaded <= 1'b0;
 
 end
 
@@ -340,11 +347,17 @@ dac(
 	.dac_i(audio),
 	.dac_o(dac_o)
 	);
+
+`ifdef DEMISTIFY
+assign DAC_L = {audio,3'b0000};
+assign DAC_R = {audio,3'b0000};
+`endif
 	
 wire m_up, m_down, m_left, m_right, m_fireA, m_fireB, m_fireC, m_fireD, m_fireE, m_fireF;
 wire m_up2, m_down2, m_left2, m_right2, m_fire2A, m_fire2B, m_fire2C, m_fire2D, m_fire2E, m_fire2F;
 wire m_tilt, m_coin1, m_coin2, m_coin3, m_coin4, m_one_player, m_two_players, m_three_players, m_four_players;
 
+//arcade_inputs #(.START1(8), .START2(10), .COIN1(9)) inputs (
 arcade_inputs inputs (
 	.clk         ( clk_sys     ),
 	.key_strobe  ( key_strobe  ),
