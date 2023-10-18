@@ -261,7 +261,7 @@ begin
 		);
 
 
-guest : component IremM72_MiST
+guest : component IremM62_MiST
 	port map
 	(
 		CLOCK_27   => clock_input,
