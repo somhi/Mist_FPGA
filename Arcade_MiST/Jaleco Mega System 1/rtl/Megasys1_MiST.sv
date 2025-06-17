@@ -236,7 +236,9 @@ wire        flipped;
 wire        tate = core_mod == 14; // Plus Alpha
 
 assign LED = ~ioctl_downl;
+`ifndef NEPTUNOPLUS
 assign SDRAM_CLK = clk_72;
+`endif	
 //assign SDRAM_CKE = 1;
 
 wire clk_72;
@@ -244,6 +246,9 @@ wire pll_locked;
 pll_mist pll(
 	.inclk0(CLOCK_27),
 	.c0(clk_72),
+`ifdef NEPTUNOPLUS
+	.c1(SDRAM_CLK),
+`endif	
 	.locked(pll_locked)
 	);
 

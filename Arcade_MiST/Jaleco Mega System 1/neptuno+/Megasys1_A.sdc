@@ -51,11 +51,11 @@ set_time_format -unit ns -decimal_places 3
 # Create Clock
 #**************************************************************
 
-create_clock -name {CLOCK_27} -period 20.000 -waveform { 0.000 10.000 } [get_ports {CLOCK_27}]
+#create_clock -name {CLOCK_27} -period 20.000 -waveform { 0.000 10.000 } [get_ports {CLOCK_27}]
 create_clock -name {SPI_SCK}  -period 41.666 -waveform { 20.8 41.666 } [get_ports {SPI_SCK}]
 
 set sys_clk    "pll|altpll_component|auto_generated|pll1|clk[0]"
-set sdram_clk  "pll|altpll_component|auto_generated|pll1|clk[0]"
+set sdram_clk  "pll|altpll_component|auto_generated|pll1|clk[1]"
 #set sdram2_clk "pll2|altpll_component|auto_generated|pll1|clk[0]"
 
 #**************************************************************
@@ -111,7 +111,7 @@ set_output_delay -clock [get_clocks $sdram_clk] -reference_pin [get_ports {SDRAM
 #**************************************************************
 
 set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll|altpll_component|auto_generated|pll1|clk[*]}]
-set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll2|altpll_component|auto_generated|pll1|clk[*]}]
+#set_clock_groups -asynchronous -group [get_clocks {SPI_SCK}] -group [get_clocks {pll2|altpll_component|auto_generated|pll1|clk[*]}]
 
 #**************************************************************
 # Set False Path
