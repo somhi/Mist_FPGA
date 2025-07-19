@@ -105,10 +105,40 @@ module SNK68_MiST
 `ifdef USE_AUDIO_IN
 	input         AUDIO_IN,
 `endif
+
+`ifdef NEPTUNOPLUS
+    // SD card
+	// output       SD_CS,
+	input           SD_SCK,     //SD_SCK is being driven by middleboard
+	// output       SD_MOSI,
+	input           SD_MISO,
+
+    // forward JAMMA DB9 data
+    output          JOY_CLK,
+    output          JOY_LOAD,
+    input           JOY_DATA,
+    output          JOY_SELECT,
+    input           XJOY_CLK,
+    input           XJOY_LOAD,
+    output          XJOY_DATA,
+`endif
+
 	input         UART_RX,
 	output        UART_TX
 
 );
+
+`ifdef NEPTUNOPLUS
+// SD card  (driven by middleboard)
+wire   spi_do_int;
+assign spi_do_int = SPI_SS4 ? 1'bz : SD_MISO;
+assign SPI_DO = spi_do_int;
+
+// JAMMA interface
+assign JOY_CLK    = XJOY_CLK;
+assign JOY_LOAD   = XJOY_LOAD;
+assign XJOY_DATA  = JOY_DATA;
+`endif
 
 `ifdef NO_DIRECT_UPLOAD
 localparam bit DIRECT_UPLOAD = 0;
@@ -234,7 +264,9 @@ rotary_ctrl rot1(clk_72, reset, rot1_cw, rot1_ccw, rotary1);
 rotary_ctrl rot2(clk_72, reset, rot2_cw, rot2_ccw, rotary2);
 
 assign LED = ~ioctl_downl;
+`ifndef NEPTUNOPLUS
 assign SDRAM_CLK = clk_72;
+`endif
 assign SDRAM_CKE = 1;
 
 wire clk_72;
@@ -242,6 +274,9 @@ wire pll_locked;
 pll_mist pll(
 	.inclk0(CLOCK_27),
 	.c0(clk_72),
+`ifdef NEPTUNOPLUS
+	.c1(SDRAM_CLK),
+`endif		
 	.locked(pll_locked)
 	);
 
@@ -296,7 +331,11 @@ user_io #(
 user_io(
 	.clk_sys        (clk_72         ),
 	.conf_str       (CONF_STR       ),
+`ifndef NEPTUNOPLUS
 	.SPI_CLK        (SPI_SCK        ),
+`else
+	.SPI_CLK		(SPI_SS4 ? SPI_SCK : SD_SCK ),
+`endif	
 	.SPI_SS_IO      (CONF_DATA0     ),
 	.SPI_MISO       (SPI_DO         ),
 	.SPI_MOSI       (SPI_DI         ),
@@ -332,7 +371,11 @@ wire  [7:0] ioctl_dout;
 
 data_io #(.ROM_DIRECT_UPLOAD(DIRECT_UPLOAD)) data_io(
 	.clk_sys       ( clk_72       ),
+	`ifndef NEPTUNOPLUS
 	.SPI_SCK       ( SPI_SCK      ),
+	`else
+	.SPI_SCK	   ( SPI_SS4 ? SPI_SCK : SD_SCK ),
+	`endif	
 	.SPI_SS2       ( SPI_SS2      ),
 	.SPI_SS4       ( SPI_SS4      ),
 	.SPI_DI        ( SPI_DI       ),
@@ -401,7 +444,11 @@ SNK68 SNK68
 
 mist_dual_video #(.COLOR_DEPTH(5),.SD_HCNT_WIDTH(10), .OUT_COLOR_DEPTH(VGA_BITS), .USE_BLANKS(1'b1), .BIG_OSD(BIG_OSD)) mist_video(
 	.clk_sys(clk_72),
+`ifndef NEPTUNOPLUS
 	.SPI_SCK(SPI_SCK),
+`else
+	.SPI_SCK( SPI_SS4 ? SPI_SCK : SD_SCK ),
+`endif		
 	.SPI_SS3(SPI_SS3),
 	.SPI_DI(SPI_DI),
 	.R(r),
